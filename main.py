@@ -8,7 +8,7 @@ import uuid
 from xml.dom import minidom
 
 
-nodeType = ["real", 'angle', 'vector', 'color']
+nodeTypes = ["real", 'angle', 'vector', 'color']
 
 
 def new_guid():
@@ -1090,45 +1090,41 @@ def drawSliderUI(root, sliderName):
     root.append(sliderUI)
 
 
-def createAdditions(valuesToAdd,  controllerIds, node):
+def createAdditions(valuesToAdd,  controllerIds, nodeType):
     for i in range(1, len(valuesToAdd)):
-        if node == 'real' or node == "angle": 
+        if nodeType == 'real' or nodeType == "angle": 
             valuesToAdd[i] = valuesToAdd[i] - valuesToAdd[0]
-        if node == "vector":
+        if nodeType == "vector":
                 valuesToAdd[i] = [valuesToAdd[i][0] - valuesToAdd[0][0], valuesToAdd[i][1] - valuesToAdd[0][1]]
-        if node == "color":
+        if nodeType == "color":
                 valuesToAdd[i] = [valuesToAdd[i][j] - valuesToAdd[0][j] for j in range(4)]
     addConvertedList = []
-    if node == "real":
-        baseValue = createNode(valuesToAdd[0], node)
-    elif node == "angle":
-        baseValue = createNode(valuesToAdd[0], node)
-    elif node == "vector":
+    if nodeType == "real" or nodeType == "angle":
+        baseValue = createNode(valuesToAdd[0], nodeType)
+    elif nodeType == "vector":
         baseValue = createNode(
-            (valuesToAdd[0][0], valuesToAdd[0][1]), node)
-    elif node == "color":
+            (valuesToAdd[0][0], valuesToAdd[0][1]), nodeType)
+    elif nodeType == "color":
             baseValue = createNode(
-                (valuesToAdd[0][0], valuesToAdd[0][1], valuesToAdd[0][2], valuesToAdd[0][3]), node)
+                (valuesToAdd[0][0], valuesToAdd[0][1], valuesToAdd[0][2], valuesToAdd[0][3]), nodeType)
     addConvertedList.append(baseValue)
     for i in range(1, len(valuesToAdd)):
-        if node == "real":
-                baseValue = createNode(valuesToAdd[i], node)
-        elif node == "angle":
-                baseValue = createNode(valuesToAdd[i], node)
-        elif node == "vector":
+        if nodeType == "real" or nodeType == "angle":
+                baseValue = createNode(valuesToAdd[i], nodeType)
+        elif nodeType == "vector":
                 baseValue = createNode(
-                    (valuesToAdd[i][0], valuesToAdd[i][1]), node)
-        elif node == "color":
+                    (valuesToAdd[i][0], valuesToAdd[i][1]), nodeType)
+        elif nodeType == "color":
                 baseValue = createNode(
-                    (valuesToAdd[i][0], valuesToAdd[i][1], valuesToAdd[i][2], valuesToAdd[i][3]), node)
-        toLinkValue = createNode(valuesToAdd[i], node)
+                    (valuesToAdd[i][0], valuesToAdd[i][1], valuesToAdd[i][2], valuesToAdd[i][3]), nodeType)
+        toLinkValue = createNode(valuesToAdd[i], nodeType)
         addConvertedList.append(createScale(
-            type=node, toLink=toLinkValue, scalarLinkExported=controllerIds[i-1]))
+            type=nodeType, toLink=toLinkValue, scalarLinkExported=controllerIds[i-1]))
     while (len(addConvertedList) >= 2):
         for i in range(math.ceil(len(addConvertedList)/2)):
             try:
                 addConvertedList[i] = createAdd(
-                    lhsLink=addConvertedList[i*2], rhsLink=addConvertedList[(i*2)+1], scalarLink=createReal("1.0"), type=node)
+                    lhsLink=addConvertedList[i*2], rhsLink=addConvertedList[(i*2)+1], scalarLink=createReal("1.0"), type=nodeType)
             except:
                 addConvertedList[i] = addConvertedList[i*2]
         for i in range(len(addConvertedList) - math.ceil(len(addConvertedList)/2)):
@@ -1136,7 +1132,7 @@ def createAdditions(valuesToAdd,  controllerIds, node):
     return addConvertedList[0]
 
 
-def connectSlider(parentsToConnect, controllerIdsList, node, fps, keyframes ):
+def connectSlider(parentsToConnect, controllerIdsList, nodeType, fps, keyframes ):
         for parent in parentsToConnect:
             animated = parent[0]
             valuesToPass = []
@@ -1145,21 +1141,18 @@ def connectSlider(parentsToConnect, controllerIdsList, node, fps, keyframes ):
                     waypointAtFrame = int(
                         round(float(waypoint.attrib['time'].replace("s", ""))*fps))
                     if (waypointAtFrame == keyframe):
-                        if node == "real":
+                        if nodeType == "real" or nodeType == "angle":
                                 valuesToPass.append(
                                     float(list(waypoint)[0].attrib['value']))
-                        if node == "angle":
-                                valuesToPass.append(
-                                    float(list(waypoint)[0].attrib['value']))
-                        if node == "vector":
+                        if nodeType == "vector":
                                 valuesToPass.append([float(list(list(waypoint)[0])[0].text), float(
                                     list(list(waypoint)[0])[1].text)])
-                        if node == "color":
+                        if nodeType == "color":
                                 valuesToPass.append([float(list(list(waypoint)[0])[0].text), float(list(list(waypoint)[0])[
                                                     1].text), float(list(list(waypoint)[0])[2].text), float(list(list(waypoint)[0])[3].text)])
             for i in parent:
                 parent.remove(i)
-            parent.append(createAdditions(valuesToPass, controllerIdsList, node))
+            parent.append(createAdditions(valuesToPass, controllerIdsList, nodeType))
 
 
 root = ElementTree.parse(sys.argv[1]).getroot()
@@ -1201,9 +1194,9 @@ exportedDefs.clear()
 for ele in reversed(exportedValues):
     exportedDefs.append(ele)
 
-for node in nodeType:
+for nodeType in nodeTypes:
     parentsToConnectSlider = []
-    for parent in root.findall(f".//*/animated[@type='{node}']/.."):
+    for parent in root.findall(f".//*/animated[@type='{nodeType}']/.."):
         animated = parent[0]
         checkList = []
         intialWaypoint = list(animated)[0]
@@ -1215,7 +1208,7 @@ for node in nodeType:
                     checkList.append(waypointAtFrame)
         if (checkList == keyFramesAt):
             parentsToConnectSlider.append(parent)
-    connectSlider(parentsToConnectSlider, controllerIdsList,node,
+    connectSlider(parentsToConnectSlider, controllerIdsList, nodeType,
                   fps=fps, keyframes = keyFramesAt)
 
 writeTo = sys.argv[2] if len(sys.argv) > 2 else sys.argv[1]
